@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, User, Calendar, Users, Link } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { computeRole } from '../utils/relationshipEngine'
 
 const AVATARS = [
   'https://api.dicebear.com/7.x/personas/svg?seed=A1&backgroundColor=b6e3f4,c0aede',
@@ -46,20 +47,44 @@ export default function AddMemberModal({ onClose, onAdded }) {
 
   function handleSubmit(e) {
     e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
-    // ── Add as spouse ────────────────────────────────────────────────
+    const errs = validate()
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      return
+    }
+
+    // =========================
+    // 🧑‍🤝‍🧑 SPOUSE CASE
     if (form.relationType === 'spouse') {
-      const target = members.find(m => m.id === parseInt(form.spouseTargetId))
-      const newMember = addMember({
+      const target = members.find(
+        m => m.id === parseInt(form.spouseTargetId)
+      )
+
+      const tempMember = {
+        id: Date.now(),
         name: form.name.trim(),
         birthYear: parseInt(form.birthYear),
         gender: form.gender,
-        role: form.role.trim() || (form.gender === 'male' ? 'Chồng' : 'Vợ'),
         parentIds: [],
         spouseId: target ? target.id : null,
         generation: target ? (target.generation ?? 0) : 0,
+      }
+
+      // build context
+      const combined = [...members, tempMember]
+
+      const groups = {}
+      for (const m of combined) {
+        if (!groups[m.generation]) groups[m.generation] = []
+        groups[m.generation].push(m)
+      }
+
+      const roleFromEngine = computeRole(tempMember, groups, combined)
+
+      const newMember = addMember({
+        ...tempMember,
+        role: roleFromEngine,
         avatar: form.avatar,
         bio: form.bio.trim(),
         hometown: form.hometown.trim(),
@@ -67,35 +92,55 @@ export default function AddMemberModal({ onClose, onAdded }) {
         story: '',
         deathYear: null,
       })
-      // Link back so the spouse relationship is bidirectional
-      if (target) updateMember(target.id, { spouseId: newMember.id })
+
+      if (target) {
+        updateMember(target.id, { spouseId: newMember.id })
+      }
+
       onAdded(newMember)
       return
     }
 
-    // ── Add as child ─────────────────────────────────────────────────
+    // 👶 CHILD CASE
     const parentIds = form.parentId ? [parseInt(form.parentId)] : []
-    // Also add spouse of parent if exists
+
     if (form.parentId) {
-      const parent = members.find(m => m.id === parseInt(form.parentId))
+      const parent = members.find(
+        m => m.id === parseInt(form.parentId)
+      )
       if (parent?.spouseId) parentIds.push(parent.spouseId)
     }
 
-    // Determine generation based on parent
     let generation = 0
     if (parentIds.length > 0) {
       const parent = members.find(m => m.id === parentIds[0])
       generation = parent ? (parent.generation ?? 0) + 1 : 0
     }
 
-    const newMember = addMember({
+    const tempMember = {
+      id: Date.now(),
       name: form.name.trim(),
       birthYear: parseInt(form.birthYear),
       gender: form.gender,
-      role: form.role.trim() || (form.gender === 'male' ? 'Thành viên nam' : 'Thành viên nữ'),
       parentIds,
       spouseId: null,
       generation,
+    }
+
+    // build context
+    const combined = [...members, tempMember]
+
+    const groups = {}
+    for (const m of combined) {
+      if (!groups[m.generation]) groups[m.generation] = []
+      groups[m.generation].push(m)
+    }
+
+    const roleFromEngine = computeRole(tempMember, groups, combined)
+
+    const newMember = addMember({
+      ...tempMember,
+      role: roleFromEngine,
       avatar: form.avatar,
       bio: form.bio.trim(),
       hometown: form.hometown.trim(),
@@ -184,17 +229,6 @@ export default function AddMemberModal({ onClose, onAdded }) {
                 <option value="female">Nữ</option>
               </select>
             </div>
-          </div>
-
-          {/* Role */}
-          <div>
-            <label className="text-sm font-semibold text-stone-600 mb-1.5 block">Vai trò / Xưng hô</label>
-            <input
-              value={form.role}
-              onChange={e => set('role', e.target.value)}
-              className="input-field"
-              placeholder="VD: Con trai, Cháu nội, Dâu..."
-            />
           </div>
 
           {/* Relationship type */}

@@ -211,7 +211,7 @@ function MemberCard({ member, pos, onClick }) {
         {member.birthYear}{member.deathYear ? ` – ${member.deathYear}` : ''}
       </text>
       <text x={CARD_W / 2} y="81" textAnchor="middle" fontSize="7.5" fill="#B45309" fontFamily="'Be Vietnam Pro', sans-serif">
-        {member.role && member.role.length > 18 ? member.role.slice(0, 17) + '…' : (member.role || '')}
+        {member.role?.split('–')[0]?.trim() || ''}
       </text>
     </g>
   )
