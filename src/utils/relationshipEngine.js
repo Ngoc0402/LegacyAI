@@ -100,3 +100,5 @@ export function getRelationshipLabel() {
 export function getGenerationGap(a, b) {
   return Math.abs((a.generation ?? 0) - (b.generation ?? 0))
 }
+
+export { computeRole }
