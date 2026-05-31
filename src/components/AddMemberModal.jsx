@@ -186,17 +186,6 @@ export default function AddMemberModal({ onClose, onAdded }) {
             </div>
           </div>
 
-          {/* Role */}
-          <div>
-            <label className="text-sm font-semibold text-stone-600 mb-1.5 block">Vai trò / Xưng hô</label>
-            <input
-              value={form.role}
-              onChange={e => set('role', e.target.value)}
-              className="input-field"
-              placeholder="VD: Con trai, Cháu nội, Dâu..."
-            />
-          </div>
-
           {/* Relationship type */}
           <div>
             <label className="text-sm font-semibold text-stone-600 mb-1.5 block">
