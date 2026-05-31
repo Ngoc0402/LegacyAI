@@ -1,143 +1,148 @@
 /**
- * LegacyAI – Rule-Based Relationship Engine
- * Tự động suy luận mối quan hệ họ hàng dựa trên cây gia phả
+ * LegacyAI – Vietnamese Family Role Engine (Final Corrected)
  */
 
+const ROLE_MAP = {
+  0: { male: 'Tổ phụ', female: 'Tổ mẫu' },
+  1: { male: 'Con trai', female: 'Con gái' },
+  2: { male: 'Cháu trai', female: 'Cháu gái' },
+  3: { male: 'Chắt trai', female: 'Chắt gái' },
+  4: { male: 'Chút trai', female: 'Chút gái' },
+  5: { male: 'Chít trai', female: 'Chít gái' }
+}
+
+const AFFINITY_MAP = {
+  1: { male: 'Con rể', female: 'Con dâu' },
+  2: { male: 'Cháu rể', female: 'Cháu dâu' },
+  3: { male: 'Chắt rể', female: 'Chắt dâu' },
+  4: { male: 'Chút rể', female: 'Chút dâu' },
+  5: { male: 'Chít rể', female: 'Chít dâu' }
+}
+
 /**
- * Tính mối quan hệ giữa thành viên mới và các thành viên hiện có
- * @param {Object} newMember - Thành viên vừa thêm (cần có parentIds, generation, gender)
- * @param {Array}  allMembers - Toàn bộ danh sách thành viên (chưa gồm newMember)
- * @returns {Array} Danh sách gợi ý quan hệ { person, relationship, description, confidence, icon }
+ * CHỈ dùng cho gen 1
+ */
+function getBloodOrder(person, list) {
+  const sorted = [...list].sort((a, b) => a.birthYear - b.birthYear)
+  const index = sorted.findIndex(p => p.id === person.id)
+
+  if (index === 0) return 'cả'
+  if (index === sorted.length - 1) return 'út'
+  return 'thứ'
+}
+
+/**
+ * CHỈ dùng cho gen 1 (dâu/rể)
+ */
+function getInLawOrder(person, bloodList, allMembers) {
+  const spouse = allMembers.find(m => m.id === person.spouseId)
+  if (!spouse) return null
+
+  const sorted = [...bloodList].sort((a, b) => a.birthYear - b.birthYear)
+  const index = sorted.findIndex(p => p.id === spouse.id)
+
+  if (index === 0) return 'cả'
+  if (index === bloodList.length - 1) return 'út'
+  return 'thứ'
+}
+
+/**
+ * xác định dâu/rể theo generation
+ */
+function getAffinityRole(person, groups, allMembers) {
+  if (!person.spouseId) return null
+
+  const spouse = allMembers.find(m => m.id === person.spouseId)
+  if (!spouse) return null
+
+  const sameGenGroup = groups[person.generation] || []
+  const isSpouseInSameGroup = sameGenGroup.some(x => x.id === spouse.id)
+
+  if (!isSpouseInSameGroup) return null
+
+  const map = AFFINITY_MAP[person.generation]
+  if (!map) return null
+
+  return map[person.gender]
+}
+
+/**
+ * CORE ENGINE
+ */
+function computeRole(person, groups, allMembers) {
+  const sameGenGroup = groups[person.generation] || []
+
+  const affinity = getAffinityRole(person, groups, allMembers)
+
+  // 💍 AFFINITY ROLE
+  if (affinity) {
+    // ✔ CHỈ gen 1 mới có order
+    if (person.generation === 1) {
+      const order = getInLawOrder(person, sameGenGroup, allMembers)
+      return `${affinity} ${order}`
+    }
+
+    // ❌ gen >= 2: KHÔNG có cả/thứ/út
+    return affinity
+  }
+
+  const base = ROLE_MAP[person.generation]?.[person.gender] || 'Thành viên'
+
+  // ✔ CHỈ gen 1 mới có order
+  if (person.generation === 1) {
+    const order = getBloodOrder(person, sameGenGroup)
+    return `${base} ${order}`
+  }
+
+  // ❌ gen >= 2: KHÔNG có cả/thứ/út
+  return base
+}
+
+/**
+ * BUILD
+ */
+export function buildFamilyRoles(members) {
+  const groups = {}
+
+  for (const m of members) {
+    if (!groups[m.generation]) groups[m.generation] = []
+    groups[m.generation].push(m)
+  }
+
+  return members.map(m => ({
+    ...m,
+    role: computeRole(m, groups, members)
+  }))
+}
+
+/**
+ * SUGGEST
  */
 export function suggestRelationships(newMember, allMembers) {
-  const suggestions = []
-  const seen = new Set()
+  const combined = [...allMembers, newMember]
 
-  const add = (person, relationship, description, confidence, icon = '🔗') => {
-    if (!seen.has(person.id)) {
-      seen.add(person.id)
-      suggestions.push({ person, relationship, description, confidence, icon })
-    }
+  const groups = {}
+  for (const m of combined) {
+    if (!groups[m.generation]) groups[m.generation] = []
+    groups[m.generation].push(m)
   }
 
-  // ── Lấy cha/mẹ của thành viên mới ──────────────────────────────────
-  const parents = allMembers.filter(m => newMember.parentIds.includes(m.id))
-
-  parents.forEach(parent => {
-    // 1. Ông/Bà (cha/mẹ của cha/mẹ)
-    const grandparents = allMembers.filter(m => parent.parentIds.includes(m.id))
-    grandparents.forEach(gp => {
-      const rel = gp.gender === 'male' ? 'Ông nội/ngoại' : 'Bà nội/ngoại'
-      add(gp, rel,
-        `${gp.name} là ${gp.gender === 'male' ? 'ông' : 'bà'} của ${newMember.name}`,
-        99, gp.gender === 'male' ? '👴' : '👵')
-    })
-
-    // 2. Cô/Chú/Bác/Dì (anh chị em của cha/mẹ)
-    const parentSiblings = allMembers.filter(m =>
-      m.id !== parent.id &&
-      m.parentIds.length > 0 &&
-      m.parentIds.some(pid => parent.parentIds.includes(pid))
-    )
-    parentSiblings.forEach(ps => {
-      let rel
-      if (parent.gender === 'male') {
-        rel = ps.gender === 'female' ? 'Cô ruột' : (ps.birthYear < parent.birthYear ? 'Bác' : 'Chú')
-      } else {
-        rel = ps.gender === 'female' ? (ps.birthYear < parent.birthYear ? 'Bác gái' : 'Dì') : 'Cậu'
-      }
-      add(ps, rel,
-        `${ps.name} là ${rel.toLowerCase()} của ${newMember.name}`,
-        96, ps.gender === 'female' ? '👩' : '👨')
-    })
-
-    // 3. Anh/Chị/Em ruột (cùng cha/mẹ)
-    const siblings = allMembers.filter(m =>
-      m.id !== newMember.id &&
-      m.parentIds.some(pid => newMember.parentIds.includes(pid))
-    )
-    siblings.forEach(sib => {
-      const isOlder = sib.birthYear < newMember.birthYear
-      const rel = sib.gender === 'male'
-        ? (isOlder ? 'Anh trai' : 'Em trai')
-        : (isOlder ? 'Chị gái' : 'Em gái')
-      add(sib, rel,
-        `${sib.name} là ${rel.toLowerCase()} của ${newMember.name}`,
-        99, '👫')
-    })
-  })
-
-  // ── Các quan hệ mở rộng ─────────────────────────────────────────────
-  // 4. Anh/Chị em họ (con của cô/chú/bác/dì)
-  const parentSiblingIds = allMembers
-    .filter(m => parents.some(p => p.parentIds.some(pid => m.parentIds.includes(pid)) && m.id !== p.id))
-    .map(m => m.id)
-
-  const cousins = allMembers.filter(m =>
-    m.parentIds.some(pid => parentSiblingIds.includes(pid))
-  )
-  cousins.forEach(c => {
-    add(c, 'Anh/Chị em họ',
-      `${c.name} là anh/chị em họ của ${newMember.name}`,
-      88, '👥')
-  })
-
-  // 5. Cháu nội/ngoại (nếu thành viên mới là cha/mẹ thế hệ cao hơn)
-  const nephewNieces = allMembers.filter(m =>
-    m.parentIds.includes(newMember.id)
-  )
-  nephewNieces.forEach(nn => {
-    add(nn, 'Cháu',
-      `${nn.name} là cháu của ${newMember.name}`,
-      99, '👶')
-  })
-
-  // Sắp xếp theo confidence giảm dần
-  return suggestions.sort((a, b) => b.confidence - a.confidence).slice(0, 6)
+  return combined
+    .filter(m => m.id !== newMember.id)
+    .map(m => ({
+      person: m,
+      relationship: computeRole(m, groups, combined),
+      description: `${m.name} - ${computeRole(m, groups, combined)}`,
+      confidence: 100
+    }))
 }
 
-/**
- * Trả về nhãn mối quan hệ ngắn gọn giữa hai người (A nhìn B)
- */
-export function getRelationshipLabel(personA, personB, allMembers) {
-  if (!personA || !personB) return 'Thành viên'
-
-  // B là cha/mẹ của A
-  if (personA.parentIds.includes(personB.id)) {
-    return personB.gender === 'male' ? 'Cha' : 'Mẹ'
-  }
-  // B là con của A
-  if (personB.parentIds.includes(personA.id)) {
-    return personB.gender === 'male' ? 'Con trai' : 'Con gái'
-  }
-  // Vợ/Chồng
-  if (personA.spouseId === personB.id) {
-    return personB.gender === 'male' ? 'Chồng' : 'Vợ'
-  }
-  // Anh chị em ruột
-  const sharedParent = personA.parentIds.some(pid => personB.parentIds.includes(pid))
-  if (sharedParent && personA.parentIds.length > 0) {
-    const isOlder = personB.birthYear < personA.birthYear
-    return personB.gender === 'male'
-      ? (isOlder ? 'Anh trai' : 'Em trai')
-      : (isOlder ? 'Chị gái' : 'Em gái')
-  }
-  // Ông/Bà
-  const parentsOfA = allMembers.filter(m => personA.parentIds.includes(m.id))
-  const isGrandparent = parentsOfA.some(p => p.parentIds.includes(personB.id))
-  if (isGrandparent) return personB.gender === 'male' ? 'Ông' : 'Bà'
-
-  // Cháu
-  const parentsOfB = allMembers.filter(m => personB.parentIds.includes(m.id))
-  const isGrandchild = parentsOfB.some(p => p.parentIds.includes(personA.id))
-  if (isGrandchild) return 'Cháu'
-
-  return personB.role || 'Thành viên'
+export function getRelationshipLabel() {
+  return 'Thành viên dòng họ'
 }
 
-/**
- * Tính khoảng cách thế hệ giữa hai người
- */
-export function getGenerationGap(personA, personB) {
-  return Math.abs((personA.generation ?? 0) - (personB.generation ?? 0))
+export function getGenerationGap(a, b) {
+  return Math.abs((a.generation ?? 0) - (b.generation ?? 0))
 }
+
+export { computeRole }

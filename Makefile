@@ -9,6 +9,7 @@ help:
 	@echo "  make clean    - Dọn dẹp các tệp tin cache của Python (__pycache__)"
 
 install:
+	poetry lock
 	poetry install
 
 run:
@@ -18,3 +19,7 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.py[cod]" -delete
 	find . -type f -name "*$$py.class" -delete
+
+dev:
+	npm run dev
+	poetry run uvicorn backend.main:app --reload
