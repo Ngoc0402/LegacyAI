@@ -1,7 +1,5 @@
 /**
- * LegacyAI – Vietnamese Family Role Engine (Extended FIXED)
- * Chỉ xác định VỊ TRÍ trong dòng họ theo thế hệ
- * Không suy luận xưng hô
+ * LegacyAI – Vietnamese Family Role Engine (Final Corrected)
  */
 
 const ROLE_MAP = {
@@ -22,7 +20,7 @@ const AFFINITY_MAP = {
 }
 
 /**
- * Thứ tự trong dòng máu (giữ nguyên logic cũ)
+ * CHỈ dùng cho gen 1
  */
 function getBloodOrder(person, list) {
   const sorted = [...list].sort((a, b) => a.birthYear - b.birthYear)
@@ -34,18 +32,14 @@ function getBloodOrder(person, list) {
 }
 
 /**
- * Xác định vị trí vợ/chồng trong cùng nhóm
+ * CHỈ dùng cho gen 1 (dâu/rể)
  */
-function getSpouseBloodIndex(person, bloodList, allMembers) {
+function getInLawOrder(person, bloodList, allMembers) {
   const spouse = allMembers.find(m => m.id === person.spouseId)
-  if (!spouse) return -1
+  if (!spouse) return null
 
   const sorted = [...bloodList].sort((a, b) => a.birthYear - b.birthYear)
-  return sorted.findIndex(p => p.id === spouse.id)
-}
-
-function getInLawOrder(person, bloodList, allMembers) {
-  const index = getSpouseBloodIndex(person, bloodList, allMembers)
+  const index = sorted.findIndex(p => p.id === spouse.id)
 
   if (index === 0) return 'cả'
   if (index === bloodList.length - 1) return 'út'
@@ -53,7 +47,7 @@ function getInLawOrder(person, bloodList, allMembers) {
 }
 
 /**
- * FIX: check đúng generation của chính người đó
+ * xác định dâu/rể theo generation
  */
 function getAffinityRole(person, groups, allMembers) {
   if (!person.spouseId) return null
@@ -61,10 +55,9 @@ function getAffinityRole(person, groups, allMembers) {
   const spouse = allMembers.find(m => m.id === person.spouseId)
   if (!spouse) return null
 
-  // 🔥 FIX: lấy đúng nhóm generation của person
   const sameGenGroup = groups[person.generation] || []
-
   const isSpouseInSameGroup = sameGenGroup.some(x => x.id === spouse.id)
+
   if (!isSpouseInSameGroup) return null
 
   const map = AFFINITY_MAP[person.generation]
@@ -81,25 +74,32 @@ function computeRole(person, groups, allMembers) {
 
   const affinity = getAffinityRole(person, groups, allMembers)
 
-  // 💍 Hôn nhân role ưu tiên cao nhất
+  // 💍 AFFINITY ROLE
   if (affinity) {
-    const order = getInLawOrder(person, sameGenGroup, allMembers)
-    return `${affinity} ${order}`
+    // ✔ CHỈ gen 1 mới có order
+    if (person.generation === 1) {
+      const order = getInLawOrder(person, sameGenGroup, allMembers)
+      return `${affinity} ${order}`
+    }
+
+    // ❌ gen >= 2: KHÔNG có cả/thứ/út
+    return affinity
   }
 
-  // 👨‍👩‍👧 Vai trò huyết thống
   const base = ROLE_MAP[person.generation]?.[person.gender] || 'Thành viên'
 
+  // ✔ CHỈ gen 1 mới có order
   if (person.generation === 1) {
     const order = getBloodOrder(person, sameGenGroup)
     return `${base} ${order}`
   }
 
+  // ❌ gen >= 2: KHÔNG có cả/thứ/út
   return base
 }
 
 /**
- * BUILD FULL ROLES
+ * BUILD
  */
 export function buildFamilyRoles(members) {
   const groups = {}
@@ -116,7 +116,7 @@ export function buildFamilyRoles(members) {
 }
 
 /**
- * SUGGEST RELATIONSHIPS
+ * SUGGEST
  */
 export function suggestRelationships(newMember, allMembers) {
   const combined = [...allMembers, newMember]
