@@ -41,7 +41,7 @@ function getAffinityRole(person, bloodList, allMembers) {
   const isSpouseInBlood = bloodList.some(x => x.id === spouse.id)
   if (!isSpouseInBlood) return null
 
-  return person.gender === 'female' ? 'Con dâu' : 'Rể'
+  return person.gender === 'female' ? 'Con dâu' : 'Con rể'
 }
 
 function computeRole(person, groups, allMembers) {

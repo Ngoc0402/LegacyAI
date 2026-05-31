@@ -62,7 +62,7 @@ export const initialMembers = [
     name: 'Lê Thị Hoa',
     birthYear: 1967,
     deathYear: null,
-    role: 'Dâu cả – Mẹ',
+    role: 'Con dâu cả – Mẹ',
     gender: 'female',
     parentIds: [],
     spouseId: 3,
