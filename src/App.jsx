@@ -1,4 +1,3 @@
-import PhotoRestorePage from './pages/PhotoRestorePage'
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
@@ -27,7 +26,6 @@ function AppRoutes() {
       <Route path="/timeline" element={<ProtectedRoute><MemoryTimelinePage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
 
-      <Route path="/photo-restore" element={<ProtectedRoute><PhotoRestorePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

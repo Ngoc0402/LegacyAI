@@ -11,7 +11,6 @@ import {
   LogOut,
   Menu,
   X,
-  Image,
 } from 'lucide-react'
 
 const navItems = [
@@ -19,7 +18,7 @@ const navItems = [
   { path: '/family-tree', label: 'Cây gia phả', Icon: TreePine },
   { path: '/timeline', label: 'Ký ức', Icon: Clock },
   { path: '/calendar', label: 'Lịch', Icon: Calendar },
-  { path: '/photo-restore', label: 'Phục hồi ảnh', Icon: Image },
+
 ]
 
 export default function Navbar() {

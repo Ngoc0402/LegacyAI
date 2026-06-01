@@ -4,8 +4,8 @@ import { useApp } from '../context/AppContext'
 import Navbar from '../components/Navbar'
 import MemoryCard from '../components/MemoryCard'
 import AddMemoryModal from '../components/AddMemoryModal'
-import { ArrowLeft, MapPin, Briefcase, Calendar, Heart, Plus, Image, Clock, BookOpen, Users } from 'lucide-react'
-
+import { ArrowLeft, MapPin, Briefcase, Calendar, Heart, Plus, Image, Clock, BookOpen, Users, Download, Sparkles, RotateCcw } from 'lucide-react'
+import { enhancePhotoWithAI } from '../services/photoEnhanceApi'
 const TABS = [
   { id: 'about',    label: 'Hồ sơ',    icon: BookOpen },
   { id: 'memories', label: 'Ký ức',    icon: Clock },
@@ -15,7 +15,7 @@ const TABS = [
 
 export default function MemberProfilePage() {
   const { id } = useParams()
-  const { getMemberById, members, getMemoriesForMember } = useApp()
+  const { getMemberById, members, getMemoriesForMember, updateMember } = useApp()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('about')
   const [showAddMemory, setShowAddMemory] = useState(false)
@@ -55,6 +55,77 @@ export default function MemberProfilePage() {
     setNewMemorySuccess(true)
     setTimeout(() => setNewMemorySuccess(false), 3000)
   }
+  function getDisplayImage(photo) {
+  if (typeof photo === 'string') return photo
+
+  return photo.activeVersion === 'enhanced'
+    ? photo.enhancedUrl
+    : photo.originalUrl
+}
+
+async function enhanceGalleryPhoto(photo, index) {
+  try {
+    const originalUrl =
+      typeof photo === 'string'
+        ? photo
+        : photo.originalUrl
+
+    const enhancedUrl =
+      await enhancePhotoWithAI(originalUrl)
+
+    const newGallery = member.gallery.map((item, i) => {
+      if (i !== index) return item
+
+      if (typeof item === 'string') {
+        return {
+          id: Date.now(),
+          originalUrl: item,
+          enhancedUrl,
+          activeVersion: 'enhanced',
+        }
+      }
+
+      return {
+        ...item,
+        enhancedUrl,
+        activeVersion: 'enhanced',
+      }
+    })
+
+    updateMember(member.id, {
+      gallery: newGallery,
+    })
+  } catch (error) {
+    console.error(error)
+    alert('Enhance ảnh thất bại')
+  }
+}
+
+function restoreGalleryPhoto(index) {
+  const newGallery = member.gallery.map((item, i) => {
+    if (i !== index) return item
+
+    if (typeof item === 'string') return item
+
+    return {
+      ...item,
+      activeVersion: 'original',
+    }
+  })
+
+  updateMember(member.id, {
+    gallery: newGallery,
+  })
+}
+
+function downloadGalleryPhoto(photo, index) {
+  const imageUrl = getDisplayImage(photo)
+
+  const link = document.createElement('a')
+  link.href = imageUrl
+  link.download = `legacyai-photo-${index + 1}.jpg`
+  link.click()
+}
 
   const age = member.deathYear
     ? `${member.birthYear} – ${member.deathYear}`
@@ -257,11 +328,51 @@ export default function MemberProfilePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {member.gallery.map((url, i) => (
-                    <div key={i} className="rounded-2xl overflow-hidden aspect-square bg-amber-50 shadow-sm">
-                      <img src={url} alt="" className="w-full h-full object-cover hover:scale-105 transition duration-300" />
-                    </div>
-                  ))}
+                  {member.gallery.map((photo, i) => {
+  const imageUrl = getDisplayImage(photo)
+  const isEnhanced = typeof photo !== 'string' && photo.activeVersion === 'enhanced'
+
+  return (
+    <div
+      key={i}
+      className="rounded-2xl overflow-hidden aspect-square bg-amber-50 shadow-sm relative group"
+    >
+      <img
+        src={imageUrl}
+        alt=""
+        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+      />
+
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-2">
+        <button
+          onClick={() => downloadGalleryPhoto(photo, i)}
+          className="w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white"
+          title="Download"
+        >
+          <Download className="w-4 h-4 text-brand-700" />
+        </button>
+
+        {isEnhanced ? (
+          <button
+            onClick={() => restoreGalleryPhoto(i)}
+            className="w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white"
+            title="Restore original"
+          >
+            <RotateCcw className="w-4 h-4 text-brand-700" />
+          </button>
+        ) : (
+          <button
+            onClick={() => enhanceGalleryPhoto(photo, i)}
+            className="w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white"
+            title="Enhance"
+          >
+            <Sparkles className="w-4 h-4 text-brand-700" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+})}
                 </div>
               )}
             </div>
