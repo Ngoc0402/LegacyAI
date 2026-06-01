@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from .feature.enhance_photo import process_enhance_photo
+from backend.feature.enhance_photo import process_enhance_photo
 
 app = FastAPI()
 
