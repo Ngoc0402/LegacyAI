@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar'
 import MemoryCard from '../components/MemoryCard'
 import AddMemoryModal from '../components/AddMemoryModal'
 import { ArrowLeft, MapPin, Briefcase, Calendar, Heart, Plus, Image, Clock, BookOpen, Users } from 'lucide-react'
-import { getRelationshipLabel } from '../utils/relationshipEngine'
 
 const TABS = [
   { id: 'about',    label: 'Hồ sơ',    icon: BookOpen },
@@ -66,7 +65,6 @@ export default function MemberProfilePage() {
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-4 py-6 animate-fade-in">
-        {/* Back button */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-stone-400 hover:text-brand-600 mb-5 transition font-medium text-sm"
@@ -74,15 +72,12 @@ export default function MemberProfilePage() {
           <ArrowLeft className="w-4 h-4" /> Quay lại
         </button>
 
-        {/* Hero card */}
         <div className="card overflow-hidden mb-5">
-          {/* Gradient header */}
           <div className="h-28 bg-gradient-to-br from-brand-600 to-brand-800 relative overflow-hidden -mx-5 -mt-5 mb-0">
             <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full" />
             <div className="absolute -bottom-6 left-1/4 w-24 h-24 bg-amber-400/10 rounded-full" />
           </div>
 
-          {/* Avatar */}
           <div className="flex items-end gap-4 -mt-10 px-1 mb-4">
             <div className="relative">
               <img
@@ -103,7 +98,6 @@ export default function MemberProfilePage() {
             </div>
           </div>
 
-          {/* Info */}
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
               <h1 className="text-2xl font-bold text-brand-900">{member.name}</h1>
@@ -118,7 +112,6 @@ export default function MemberProfilePage() {
             </button>
           </div>
 
-          {/* Quick stats */}
           <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-amber-50">
             <div className="flex items-center gap-1.5 text-sm text-stone-500">
               <Calendar className="w-4 h-4 text-brand-400" />
@@ -143,14 +136,12 @@ export default function MemberProfilePage() {
           </div>
         </div>
 
-        {/* Success toast */}
         {newMemorySuccess && (
           <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 animate-fade-in">
             ✅ Ký ức mới đã được lưu thành công!
           </div>
         )}
 
-        {/* Tabs */}
         <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-amber-100 mb-5">
           {TABS.map(({ id: tid, label, icon: Icon }) => {
             const count = tid === 'memories' ? memberMemories.length
@@ -181,9 +172,7 @@ export default function MemberProfilePage() {
           })}
         </div>
 
-        {/* Tab content */}
         <div className="animate-fade-in">
-          {/* ABOUT */}
           {activeTab === 'about' && (
             <div className="space-y-4">
               {member.bio && (
@@ -219,7 +208,6 @@ export default function MemberProfilePage() {
             </div>
           )}
 
-          {/* MEMORIES */}
           {activeTab === 'memories' && (
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -259,7 +247,6 @@ export default function MemberProfilePage() {
             </div>
           )}
 
-          {/* GALLERY */}
           {activeTab === 'gallery' && (
             <div>
               {(!member.gallery || member.gallery.length === 0) ? (
@@ -280,10 +267,8 @@ export default function MemberProfilePage() {
             </div>
           )}
 
-          {/* FAMILY */}
           {activeTab === 'family' && (
             <div className="space-y-4">
-              {/* Parents */}
               {parents.length > 0 && (
                 <div className="card">
                   <h3 className="font-bold text-brand-800 mb-3 flex items-center gap-2">
@@ -297,7 +282,6 @@ export default function MemberProfilePage() {
                 </div>
               )}
 
-              {/* Spouse */}
               {spouse && (
                 <div className="card">
                   <h3 className="font-bold text-brand-800 mb-3 flex items-center gap-2">
@@ -307,7 +291,6 @@ export default function MemberProfilePage() {
                 </div>
               )}
 
-              {/* Siblings */}
               {siblings.length > 0 && (
                 <div className="card">
                   <h3 className="font-bold text-brand-800 mb-3 flex items-center gap-2">
@@ -329,7 +312,6 @@ export default function MemberProfilePage() {
                 </div>
               )}
 
-              {/* Children */}
               {children.length > 0 && (
                 <div className="card">
                   <h3 className="font-bold text-brand-800 mb-3 flex items-center gap-2">
